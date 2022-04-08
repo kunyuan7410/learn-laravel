@@ -24,11 +24,11 @@ class AuthController extends Controller
     {
 
         $this->validate($request, [
-            'email' => 'required|string',
-            'password' => 'required|string',
+            'phone_number' => 'required',
+            'password' => 'required',
         ]);
 
-        $credentials = $request->only(['email', 'password']);
+        $credentials = $request->only(['phone_number', 'password']);
 
         if (! $token = Auth::attempt($credentials)) {
             return response()->json(['message' => 'Unauthorized'], 401);
@@ -37,38 +37,23 @@ class AuthController extends Controller
         return $this->respondWithToken($token);
     }
 
-    public function register(Request $request)
+    public function register(Request $request, User $user)
     {
-        // $this->validate($request, [
-        //     'email' => 'required|string',
-        //     'password' => 'required|string',
-        //     'name' => 'required|string',
-        // ]);
-        $name = $request->name;
-        $email=$request->email;
-        $password=$request->password;
-
-        if(empty($name) or empty($email) or empty($password)){
-            return response()->json(['status'=>'error','message'=>'You must fill all the fields']);
-        }
-
-        if(!filter_var($email,FILTER_VALIDATE_EMAIL)){
-            return response()->json(['status'=>'error','message'=>'You must enter a valid email']);
-        }
-
-        if(strlen($password)<6){
-            return response()->json(['status'=>'error','message'=>'Password should be min 6 character']);
-        }
-
-        if(User::where('email','=',$email)->exists()){
-            return response()->json(['status'=>'error','message'=>'User already exists with this email']);
-        }
+        $this->validate($request, [
+            'name' => 'required',
+            'phone_number' => 'required|unique:users,phone_number,'.$user->id,
+            'password' => 'required',
+            'email' => 'required|email|unique:users,email,'.$user->id,
+            'branch' => 'required'
+        ]);
 
         try{
             $user = new User();
             $user->name=$request->name;
-            $user->email=$request->email;
+            $user->phone_number=$request->phone_number;
             $user->password=app('hash')->make($request->password);
+            $user->email=$request->email;
+            $user->branch=$request->branch;
 
             if($user->save()){
                 return $this->login($request);
